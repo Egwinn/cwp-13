@@ -4,7 +4,7 @@ const bodyParser = require('body-parser');
 const db = require('../db/db');
 vehiclesRouter.use(bodyParser.json());
 
-const ErrorObj = { code: 400, message: 'Error!!!' };
+const ErrorObj = { code: 404, message: 'Error!!!' };
 class Vehicle {
     constructor(name, fleetId) {
         this.name = name;
@@ -82,5 +82,28 @@ vehiclesRouter.post('/create', (req, resp, next) => {
     resp.json(vehicle);
 });
 
+vehiclesRouter.get('/milage', async (req, resp, next) => {
+    if (!req.query.id) { resp.json(ErrorObj); return; }
+    const id = req.query.id;
+    let vehicle = await db.Vehicle.findById(id);
+    if (vehicle) {
+        let coords = [];
+        let motions = await db.Motion.findAll({
+            where: {
+                vehicleId: id
+            }
+        });
+        motions.forEach((motion) => {
+            coords.push(motion.latLng)
+        });
+        if (coords.length < 2)
+            resp.json(0);
+        else {
+            let distance = require('geolib').getPathLength(coords);
+            resp.json(distance);
+        }
+    }
+    else resp.json(ErrorObj);
+});
 
 module.exports = vehiclesRouter;
